@@ -18,8 +18,6 @@ def prev_page():
     st.rerun()
 
 
-# Title and header shown on all pages
-
 # Page 0: Welcome and Email Collection
 if st.session_state.page == 0:
 
@@ -353,11 +351,9 @@ elif st.session_state.page == 2:
             local_partners == "Select Option"
         )
         
-        if st.button("Generate Risk Analysis", type="primary", key="investment_next", disabled=proceed_button_disabled):
-            # Proceed to risk analysis page
+        if st.button("Next", type="primary", key="investment_next", disabled=proceed_button_disabled):
             next_page()
 
 elif st.session_state.page == 3:
-    # This would be your risk analysis page
     pass
 
