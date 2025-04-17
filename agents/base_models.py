@@ -2,7 +2,7 @@ import google.generativeai as genai
 import time
 
 class GeminiModel:
-    def __init__(self, api_key, model_name="gemini-2.0-flash-live-001"):
+    def __init__(self, api_key, model_name="gemini-2.0-flash"):
         self.api_key = api_key
         self.model_name = model_name
         self.cache = {}

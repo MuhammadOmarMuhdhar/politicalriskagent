@@ -1,25 +1,15 @@
 import logging
 import json
-from base_models import GeminiModel
-from utils import clean_and_parse_json
+from agents.base_models import GeminiModel
+import time
 
 logger = logging.getLogger(__name__)
 
 class agent:
-    def __init__(self, api_key, model_name="gemini-1.5-flash"):
+    def __init__(self, api_key, model_name="gemini-2.0-flash"):
         """Initialize the risk keyword generator with API key and model."""
         self.gemini = GeminiModel(api_key=api_key, model_name=model_name)
-        self.gdelt_themes = self._load_gdelt_themes()
         self.risk_types = self._load_risk_types()
-        
-    def _load_gdelt_themes(self):
-        """Load GDELT themes from the lookup file."""
-        try:
-            with open('data/gdeltthemes/LOOKUP-GKGTHEMES.TXT', 'r') as file:
-                return file.read()
-        except Exception as e:
-            logger.error(f"Error loading GDELT themes: {e}")
-            return ""
             
     def _load_risk_types(self):
         """Load risk types from the JSON file."""
@@ -33,40 +23,67 @@ class agent:
     def _build_prompt(self, user_data, risk_type, risk_definition):
         """Build prompt for the AI model based on user data and risk type."""
         return f"""
-            You are a political risk analyst, currently interacting with a client.
-            The client has just filled out a survey providing you with their business profile and planned activities in a specific country.
-            Here is that information:
+        You are a political risk analyst currently advising a client. The client has completed a survey outlining their business profile and planned activities in a specific country. Below is the information they provided:
 
-            ### Business Profile
-            - **Industry Sector**: {user_data['industry']}
-            - **Headquarters Location**: {user_data['location_business']}
-            - **Company Size**: {user_data['company_size']}
-            - **Business Maturity**: {user_data['business_maturity']}
-            - **Business Model**: {user_data['business_model']}
-            - **International Exposure**: {user_data['international_exposure']}
+        ### Business Profile
+        - **Industry Sector**: {user_data['industry']}
+        - **Headquarters Location**: {user_data['location_business']}
+        - **Company Size**: {user_data['company_size']}
+        - **Business Maturity**: {user_data['business_maturity']}
+        - **Business Model**: {user_data['business_model']}
+        - **International Exposure**: {user_data['international_exposure']}
 
-            ### Planned Activity
-            - **Type of Business Activity**: {user_data['activity_type']}
-            - **Target Country/Region**: {user_data['target_location']}
-            - **Planned Timeline**: {user_data['timeline']}
-            - **Primary Concerns**: {", ".join(user_data['primary_concerns']) if user_data['primary_concerns'] else "None specified"}
+        ### Planned Activity
+        - **Type of Business Activity**: {user_data['activity_type']}
+        - **Target Country/Region**: {user_data['target_location']}
+        - **Planned Timeline**: {user_data['timeline']}
+        - **Investment Size**: {user_data['investment_size']}
+        - **Strategic Importance**: {user_data['strategic_importance']}
+        - **Local Partnerships**: {user_data['local_partnerships']}
+        - **Primary Concerns**: {", ".join(user_data['primary_concerns']) if user_data['primary_concerns'] else "None specified"}
+        - **Other Relevant Information**: {user_data['other_relevant_info']}
 
-            At this stage you are working to source data from GDELT.
-            You will be using the GDELTdocs API to source this data.
-            At this point you are working to identify the most relevant GDELT themes and key words in relation to 
-            this particular case for this {risk_type} type of risk.
+       
+        Your current task is to assess potential **{risk_type}** risk for this client, as defined below:
 
-            This risk is defined as: {risk_definition}
+        **{risk_definition}**
 
-            The GDELT themes are as follows:
-            {self.gdelt_themes}
+        You will be using the GDELTdocs API to identify:
+        1. that you generate based on the client's context and the nature of the risk. These keywords should guide data sourcing and highlight specific concerns, actors, or indicators relevant to the scenario.
 
-            Please provide a JSON output with the following structure:
-            {{
-                "relevant_themes": ["THEME1", "THEME2", "THEME3"],
-                "keywords": ["keyword1", "keyword2", "keyword3"]
-            }}
-            """
+
+        Please respond in the following JSON format:
+        {{
+            "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+        }}
+
+        ### Here is an example of how you would respond to the client: 
+
+        For a client in the agriculture sector, the following information was provided:
+
+        - **Industry Sector**: Agriculture
+        - **Headquarters Location**: United States
+        - **Company Size**: Medium
+        - **Business Maturity**: Established
+        - **Business Model**: B2B
+        - **International Exposure**: High
+        - **Type of Business Activity**: Investment
+        - **Target Country/Region**: Russia
+        - **Planned Timeline**: Short-term
+        - **Investment Size**: Medium
+        - **Strategic Importance**: High
+        - **Local Partnerships**: Yes
+        - **Primary Concerns**: None
+        - **Other Relevant Information**: None
+        
+        You would provide the following response:
+        
+        ### Response
+        {{"keywords": ["Tariffs", "Sanctions", "Trade Agreements", "Political Stability", "Regulatory Changes"]}}
+
+
+        """
+
 
     def generate_keywords_for_all_risks(self, user_data):
         """Generate keywords for all risk types based on user data."""
@@ -77,39 +94,28 @@ class agent:
                 logger.info(f"Generating keywords for risk type: {risk_type}")
                 prompt = self._build_prompt(user_data, risk_type, risk_definition)
                 output = self.gemini.generate(prompt)
-                parsed_output = clean_and_parse_json(output, fallback={
-                    "relevant_themes": [],
-                    "keywords": [],
-                    "justification": f"Failed to parse output for {risk_type}"
-                })
-                results[risk_type] = parsed_output
+                
+                results[risk_type] = output
+
             except Exception as e:
                 logger.error(f"Error generating keywords for {risk_type}: {e}")
                 results[risk_type] = {
                     "relevant_themes": [],
-                    "keywords": [],
-                    "justification": f"Error occurred: {str(e)}"
+                    "keywords": []
                 }
+
+                retry_delay = getattr(e, 'retry_delay', None)
+                if retry_delay:
+                    logger.info(f"Retrying after {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    logger.info("Retrying after default delay...")
+                    time.sleep(10)
         
         return results
-        
-    def generate_keywords_for_risk_type(self, user_data, risk_type):
-        """Generate keywords for a specific risk type based on user data."""
-        if risk_type not in self.risk_types:
-            logger.error(f"Risk type '{risk_type}' not found in risk definitions")
-            return None
-            
-        try:
-            risk_definition = self.risk_types[risk_type]
-            prompt = self._build_prompt(user_data, risk_type, risk_definition)
-            output = self.gemini.generate(prompt)
-            return clean_and_parse_json(output, fallback=None)
-        except Exception as e:
-            logger.error(f"Error generating keywords for {risk_type}: {e}")
-            return None
 
 # Example usage:
-# generator = RiskKeywordGenerator(api_key="your_api_key")
+# generator = agent(api_key="your_api_key")
 # 
 # # Generate keywords for all risk types
 # all_results = generator.generate_keywords_for_all_risks(user_data)

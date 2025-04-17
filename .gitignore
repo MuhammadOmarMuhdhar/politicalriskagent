@@ -175,3 +175,6 @@ cython_debug/
 
 # secr
 apisecrets
+
+# debugging
+workspace.ipynb
