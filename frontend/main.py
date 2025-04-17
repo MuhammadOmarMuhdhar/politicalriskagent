@@ -310,7 +310,7 @@ elif st.session_state.page == 2:
 
         # Additional Context
         if 'additional_context' not in st.session_state:
-            st.session_state.additional_context = " "
+            st.session_state.additional_context = None
 
         st.markdown("""
         Please share any extra details or concerns about this activity that haven't been covered above. 
@@ -320,8 +320,7 @@ elif st.session_state.page == 2:
             "Any additional context about this activity?",
             help="Include any specific concerns or details not covered above",
             height=100,
-            key="additional_context",
-            value=st.session_state.get('additional_context', '')
+            key="additional_context"
         )
         
     # Save all selections to session state
@@ -330,7 +329,6 @@ elif st.session_state.page == 2:
     st.session_state.timeline = timeline
     st.session_state.investment_scale = investment_scale
     st.session_state.strategic_importance = strategic_importance
-    # st.session_state.local_partners = local_partners
     st.session_state.primary_concerns = primary_concerns
     st.session_state.local_partners = local_partners
     # st.session_state.additional_context = additional_context
@@ -355,5 +353,77 @@ elif st.session_state.page == 2:
             next_page()
 
 elif st.session_state.page == 3:
-    pass
+    business_profile = {
+        "Industry": st.session_state.industry,
+        "Headquarters Location": st.session_state.location_business,
+        "Company Size": st.session_state.company_size,
+        "Business Maturity": st.session_state.business_maturity,
+        "Business Model": st.session_state.business_model,
+        "International Exposure": st.session_state.international_exposure
+    }
 
+    investment_details = {
+        "Type of Activity": st.session_state.activity_type,
+        "Target Location": st.session_state.target_location,
+        "Timeline": st.session_state.timeline,
+        "Investment Scale": st.session_state.investment_scale,
+        "Strategic Importance": st.session_state.strategic_importance,
+        "Local Partners": st.session_state.local_partners,
+        "Primary Concerns": ", ".join(st.session_state.primary_concerns),
+        "Additional Context": st.session_state.get("additional_context", "")
+    }
+
+    st.title("Summary of Your Input")
+
+    # --- Business Profile Section ---
+    st.subheader("📊 Business Profile")
+    for label, value in business_profile.items():
+        st.markdown(f"**{label}:** {value}")
+
+    st.markdown("---")
+
+    # --- Investment Details Section ---
+    st.subheader("🌍 Investment or Expansion Details")
+    for label, value in investment_details.items():
+        # if label == "Additional Context" and value.strip():
+        #     with st.expander("💬 Additional Context"):
+        #         st.markdown(value)
+        # elif label != "Additional Context":
+            st.markdown(f"**{label}:** {value}")
+
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from agents.data_agent import agent 
+    from apisecrets.geminapi import api_key
+    
+    user_data = {
+        "industry": st.session_state.industry,
+        "location_business": st.session_state.location_business,
+        "company_size": st.session_state.company_size,
+        "business_maturity": st.session_state.business_maturity,
+        "business_model": st.session_state.business_model,
+        "international_exposure": st.session_state.international_exposure,
+        "activity_type": st.session_state.activity_type,
+        "target_location": st.session_state.target_location,
+        "timeline": st.session_state.timeline,
+        "investment_size": st.session_state.investment_scale,
+        "strategic_importance": st.session_state.strategic_importance,
+        "local_partnerships": st.session_state.local_partners,
+        "primary_concerns": ", ".join(st.session_state.primary_concerns),
+        "other_relevant_info": st.session_state.get("additional_context", "")
+    }
+
+
+    generator = agent(api_key=api_key)
+
+    keywords = generator.generate_keywords_for_all_risks(user_data)
+
+    st.write(keywords)
+
+
+
+
+
+
+    
