@@ -2,6 +2,7 @@ import logging
 import json
 import time
 from agents.base_model import GeminiModel
+from agents.prompts import header
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +11,7 @@ class agent:
         """Initialize the scenario generator agent with API key and model."""
         self.gemini = GeminiModel(api_key=api_key, model_name=model_name)
         self.risk_types = self._load_risk_types()
-            
+
     def _load_risk_types(self):
         """Load risk types from the JSON file."""
         try:
@@ -20,34 +21,19 @@ class agent:
             logger.error(f"Error loading risk types: {e}")
             return {}
         
+        
     def _build_scenario_prompt(self, user_data, risk_type, risk_definition):
         """Build prompt for generating scenarios based on user survey data."""
-        return f"""
-        You are a risk intelligence agent specializing in identifying political and business risks. Your role is to take a user's survey response and transform it into a set of three well-structured, context-specific questions that help assess potential risks, based on the selected risk category.
 
-        Below is the information provided by the user:
+        heading = header.prompt_header(user_data=user_data)
+        
+        prompt = f"""
+        
+        {heading}
 
-        ### Business Profile
-        - **Industry Sector**: {user_data['industry']}
-        - **Headquarters Location**: {user_data['location_business']}
-        - **Company Size**: {user_data['company_size']}
-        - **Business Maturity**: {user_data['business_maturity']}
-        - **Business Model**: {user_data['business_model']}
-        - **International Exposure**: {user_data['international_exposure']}
-
-        ### Planned Activity
-        - **Type of Business Activity**: {user_data['activity_type']}
-        - **Target Country/Region**: {user_data['target_location']}
-        - **Planned Timeline**: {user_data['timeline']}
-        - **Investment Size**: {user_data['investment_size']}
-        - **Strategic Importance**: {user_data['strategic_importance']}
-        - **Local Partnerships**: {user_data['local_partnerships']}
-        - **Primary Concerns**: {", ".join(user_data['primary_concerns']) if user_data['primary_concerns'] else "None specified"}
-        - **Other Relevant Information**: {user_data['other_relevant_info']}
-
-        Your task is to generate **three targeted questions** that surface the most critical risks related to the specified risk category: **{risk_type}**.
-
-        **Definition of this risk type**:  
+        Your task is to generate **three targeted questions** that surface the most critical risks related to the specified risk category: **{risk_type}** .
+    
+        **Definition of this risk type**:
         {risk_definition}
 
         The questions should:
@@ -60,38 +46,8 @@ class agent:
             "scenario": ["question1", "question2", "question3"]
         }}
 
-        ---
-
-        ### Example
-
-        **User Information:**
-        - **Industry Sector**: Renewable Energy  
-        - **Headquarters Location**: Germany  
-        - **Company Size**: Mid-sized  
-        - **Business Maturity**: Growth stage  
-        - **Business Model**: Manufacturing and Export  
-        - **International Exposure**: High  
-        - **Type of Business Activity**: Expansion of solar panel manufacturing  
-        - **Target Country/Region**: Vietnam  
-        - **Planned Timeline**: 18 months  
-        - **Investment Size**: $30M  
-        - **Strategic Importance**: High  
-        - **Local Partnerships**: Joint venture planned  
-        - **Primary Concerns**: Environmental regulations, foreign investment restrictions  
-        - **Other Relevant Information**: Aims to benefit from local green energy incentives
-
-        **Risk Type**: Regulatory Risk  
-        **Definition**: Regulatory risk refers to the potential for losses or operational disruption due to changes in laws, policies, or enforcement practices in a specific jurisdiction.
-
-        **Response**:
-        {{
-            "scenario": [
-                "How might upcoming changes in Vietnam's environmental or energy regulations affect solar manufacturing operations?",
-                "Are there any restrictions or approval processes for foreign joint ventures in the renewable energy sector?",
-                "What is the risk of policy shifts that could reduce or eliminate green energy subsidies currently offered in Vietnam?"
-            ]
-        }}
         """
+        return prompt
     
     def generate_scenarios(self, user_data, risk_type=None):
         """Generate scenarios for specific or all risk types based on user data."""
