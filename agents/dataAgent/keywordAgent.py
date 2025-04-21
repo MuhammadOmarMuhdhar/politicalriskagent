@@ -2,6 +2,7 @@ import logging
 import json
 import time
 from agents.base_model import GeminiModel
+from agents.prompts import header
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +11,7 @@ class agent:
         """Initialize the keyword generator agent with API key and model."""
         self.gemini = GeminiModel(api_key=api_key, model_name=model_name)
         self.risk_types = self._load_risk_types()
+        
             
     def _load_risk_types(self):
         """Load risk types from the JSON file."""
@@ -20,28 +22,37 @@ class agent:
             logger.error(f"Error loading risk types: {e}")
             return {}
     
-    def _build_keyword_prompt(self, risk_type, risk_definition, scenario):
+    def _build_keyword_prompt(self, user_data, risk_type, risk_definition, scenario):
         """Build prompt for generating keywords based on scenarios."""
         # Join the scenario questions into a coherent text
         scenario_text = " ".join(scenario)
+
+        # Format the header with user data
+        heading = header.prompt_header(user_data=user_data)
         
         return f"""
-        You are a political risk intelligence agent advising a client. The client has shared a business scenario and seeks to identify potential risks associated with their planned activity.
 
-        ### Client Scenario
+        {heading}
+
+        You are now analyzing the client's scenario to extract key political or business risk indicators. Your goal is to distill the scenario into actionable insight by identifying core risk-related keywords.
+
+        ### Client Scenario  
         {scenario_text}
 
-        This scenario pertains to the following risk category: **{risk_type}**
+        This scenario falls under the following risk category: **{risk_type}**
 
         **Definition of Risk Type:**  
         {risk_definition}
 
-        Your task is to generate **five targeted keywords** that capture the most relevant risk-related factors in this scenario. These keywords should be:
+        ---
 
-        - Highly specific to the client's context  
-        - Limited to ** strictly 1–2 words each**
-        - Useful for querying sources like the GDELTdocs API
-        - Focused on relevant actors, triggers, or indicators (e.g., policies, sectors, institutions, or events)
+        **Your Task:**  
+        Generate **five targeted keywords** that capture the most relevant risk-related factors in this scenario. Each keyword should:
+
+        - Be **highly specific** to the client's context  
+        - Be **strictly 1–2 words** in length  
+        - Be useful for querying structured sources like the **GDELTdocs API**  
+        - Focus on **key actors, triggers, or indicators** — such as policies, sectors, institutions, or events
 
         Please respond in the following JSON format:
         {{
@@ -70,7 +81,7 @@ class agent:
         }}
         """
 
-    def generate_keywords(self, scenarios, risk_type=None):
+    def generate_keywords(self, user_data, scenarios, risk_type=None):
         """Generate keywords based on scenarios for specific or all risk types."""
         results = {}
         
@@ -83,7 +94,10 @@ class agent:
                     return {risk_type: {"keywords": []}}
                 
                 logger.info(f"Generating keywords for: {risk_type}")
-                prompt = self._build_keyword_prompt(risk_type, self.risk_types[risk_type], scenario_data)
+                prompt = self._build_keyword_prompt(user_data=user_data, 
+                                                    risk_type=risk_type, 
+                                                    risk_definition=self.risk_types[risk_type], 
+                                                    scenario=scenario_data)
                 response = self.gemini.generate(prompt)
                 results[risk_type] = response
             except Exception as e:
@@ -99,7 +113,7 @@ class agent:
                 results[risk_type] = {"keywords": []}
                 continue
                 
-            scenario_data = scenarios[risk_type].get("scenario", [])
+            scenario_data = scenarios[risk_type]
             if not scenario_data:
                 logger.warning(f"Empty scenario data for {risk_type}")
                 results[risk_type] = {"keywords": []}
@@ -107,7 +121,10 @@ class agent:
                 
             try:
                 logger.info(f"Generating keywords for: {risk_type}")
-                prompt = self._build_keyword_prompt(risk_type, risk_definition, scenario_data)
+                prompt = self._build_keyword_prompt(user_data=user_data, 
+                                                    risk_type=risk_type, 
+                                                    risk_definition=self.risk_types[risk_type], 
+                                                    scenario=scenario_data)
                 response = self.gemini.generate(prompt)
                 results[risk_type] = response
             except Exception as e:
