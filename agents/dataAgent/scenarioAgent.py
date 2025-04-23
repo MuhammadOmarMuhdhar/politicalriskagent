@@ -15,7 +15,7 @@ class agent:
     def _load_risk_types(self):
         """Load risk types from the JSON file."""
         try:
-            with open('data/risktypes/risks.json', 'r') as file:
+            with open('data/LLMcontext/risks.json', 'r') as file:
                 return json.load(file)
         except Exception as e:
             logger.error(f"Error loading risk types: {e}")
@@ -31,7 +31,7 @@ class agent:
         
         {heading}
 
-        Your task is to generate **three targeted questions** that surface the most critical risks related to the specified risk category: **{risk_type}** .
+        Your task is to generate **three targeted scenari** that surface the most critical risks related to the specified risk category: **{risk_type}** .
     
         **Definition of this risk type**:
         {risk_definition}
