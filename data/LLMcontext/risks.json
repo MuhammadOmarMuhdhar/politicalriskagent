@@ -1,0 +1,62 @@
+
+{
+    "Governance": {
+            "Government": {
+                "keywords": [
+                    "Mass Support",
+                    "Elite Support",
+                    "Institutional Support"
+                ]
+            },
+            "Institutional": {
+                "keywords": [
+                    "Institutional Stability",
+                    "State Capacity",
+                    "Rule of Law"
+                ]
+            },
+            "Policy": {
+                "keywords": [
+                    "Rule of Law",
+                    "Macro-Economic Policy",
+                    "Micro-Economic Policy",
+                    "Investment / Trade Policy"
+                ]
+            }
+    },
+    "Society": {
+
+            "Human Development": {
+                "keywords": [
+                    "Civil Liberties",
+                    "Health",
+                    "Human Capital"
+                ]
+            },
+            "SocPolar": {
+                "keywords": [
+                    "Ethno-Religious",
+                    "Socio-Economic",
+                    "Migration / Population"
+                ]
+            }
+    },
+    "Security": {
+    
+            "Internal": {
+                "keywords": [
+                    "Political Violence",
+                    "Criminal Violence",
+                    "Security Force",
+                    "Environment / Geography"
+                ]
+            },
+            "External": {
+                "keywords": [
+                    "Security Force",
+                    "Environment / Geography",
+                    "International Relations"
+                ]
+            }
+    }
+}

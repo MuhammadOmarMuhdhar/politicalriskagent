@@ -16,7 +16,7 @@ class agent:
     def _load_risk_types(self):
         """Load risk types from the JSON file."""
         try:
-            with open('data/risktypes/risks.json', 'r') as file:
+            with open('data/LLMcontext/risks.json', 'r') as file:
                 return json.load(file)
         except Exception as e:
             logger.error(f"Error loading risk types: {e}")
