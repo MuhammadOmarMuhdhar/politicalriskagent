@@ -97,7 +97,6 @@ class agent:
                         continue
                         
                     try:
-                        logger.info(f"Generating keywords for: {keyword}")
                         prompt = self._build_keyword_prompt(user_data=user_data, 
                                                             risk_type=keyword, 
                                                             scenario=scenario_data[keyword])

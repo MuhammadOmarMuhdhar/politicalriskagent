@@ -47,7 +47,7 @@ class agent:
         """
         return prompt
     
-    def generate_scenarios(self, user_data, risk_type=None):
+    def generate(self, user_data, risk_type=None):
         """Generate scenarios for specific or all risk types based on user data."""
         results = defaultdict(lambda: defaultdict(dict))        
         
@@ -57,7 +57,6 @@ class agent:
                 keywords_list = sub_item['keywords']
                 for keyword in keywords_list:
                     try:
-                        logger.info(f"Generating scenario for: {keyword}")
                         prompt = self._build_scenario_prompt(user_data, keyword)
                         response = self.gemini.generate(prompt)
                         results[broad_risk][specific_risk][keyword] = response
