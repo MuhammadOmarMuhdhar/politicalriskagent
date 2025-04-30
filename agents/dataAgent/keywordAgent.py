@@ -45,9 +45,10 @@ class agent:
         ---
 
         **Your Task:**  
-        Generate **three targeted keywords** that capture the most relevant risk-related factors in this scenario. Each keyword should:
+        Generate **six targeted keywords** that capture the most relevant risk-related factors in this scenario. Each keyword should:
 
-        - Be **highly specific** to the client's context  
+        - Be **highly specific** to the client's context
+        - Do not use generic terms or phrases like ESG, Risk, Political, etc. 
         - Be **strictly 1 words** in length  
         - Be useful for querying structured sources like the **GDELTdocs API**  
         - Be **actionable** and relevant to the client's business objectives
@@ -55,7 +56,7 @@ class agent:
 
         Please respond in the following JSON format:
         {{
-            "keywords": ["keyword1", "keyword2", "keyword3"]
+            "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6"]
         }}
 
         ---
