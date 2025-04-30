@@ -3,6 +3,7 @@ import json
 import time
 from agents.base_model import GeminiModel
 from agents.prompts import header
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class agent:
             return {}
         
         
-    def _build_scenario_prompt(self, user_data, risk_type, risk_definition):
+    def _build_scenario_prompt(self, user_data, risk_type):
         """Build prompt for generating scenarios based on user survey data."""
 
         heading = header.prompt_header(user_data=user_data)
@@ -32,9 +33,6 @@ class agent:
         {heading}
 
         Your task is to generate **three targeted scenari** that surface the most critical risks related to the specified risk category: **{risk_type}** .
-    
-        **Definition of this risk type**:
-        {risk_definition}
 
         The questions should:
         - Be tailored to the user's business profile and planned activity
@@ -49,44 +47,23 @@ class agent:
         """
         return prompt
     
-    def generate_scenarios(self, user_data, risk_type=None):
+    def generate(self, user_data, risk_type=None):
         """Generate scenarios for specific or all risk types based on user data."""
-        results = {}
-        
-        # If risk_type is specified, only generate for that type
-        if risk_type and risk_type in self.risk_types:
-            try:
-                logger.info(f"Generating scenario for: {risk_type}")
-                prompt = self._build_scenario_prompt(user_data, risk_type, self.risk_types[risk_type])
-                response = self.gemini.generate(prompt)
-                results[risk_type] = response
-            except Exception as e:
-                logger.error(f"Error generating scenario for {risk_type}: {e}")
-                results[risk_type] = {"scenario": []}
-                self._handle_retry(e)
-            return results
+        results = defaultdict(lambda: defaultdict(dict))        
         
         # Generate for all risk types
-        for risk_type, risk_definition in self.risk_types.items():
-            try:
-                logger.info(f"Generating scenario for: {risk_type}")
-                prompt = self._build_scenario_prompt(user_data, risk_type, risk_definition)
-                response = self.gemini.generate(prompt)
-                results[risk_type] = response
-            except Exception as e:
-                logger.error(f"Error generating scenario for {risk_type}: {e}")
-                results[risk_type] = {"scenario": []}
-                self._handle_retry(e)
-        
-        return results
-    
-    def _handle_retry(self, exception):
-        """Handle retries with appropriate delay."""
-        retry_delay = getattr(exception, 'retry_delay', None)
-        if retry_delay:
-            logger.info(f"Retrying after {retry_delay} seconds...")
-            time.sleep(retry_delay)
-        else:
-            logger.info("Retrying after default delay...")
-            time.sleep(10)
+        for broad_risk, item in self.risk_types.items(): 
+            for specific_risk, sub_item in item.items():
+                keywords_list = sub_item['keywords']
+                for keyword in keywords_list:
+                    try:
+                        prompt = self._build_scenario_prompt(user_data, keyword)
+                        response = self.gemini.generate(prompt)
+                        results[broad_risk][specific_risk][keyword] = response
 
+                    except Exception as e:
+                        logger.error(f"Error generating scenario for {keyword}: {e}")
+                        results[broad_risk][specific_risk][keyword] = {"scenario": []}
+                        self._handle_retry(e)
+
+        return results

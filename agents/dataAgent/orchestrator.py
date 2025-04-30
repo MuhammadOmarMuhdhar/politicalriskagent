@@ -1,9 +1,13 @@
 import logging
 from agents.dataAgent import scenarioAgent
 from agents.dataAgent import keywordAgent
-from agents.utils import clean_and_parse_json
+from agents.utils.cleanJson import parse
 from scraper import gdelt
 from datetime import datetime, timedelta
+from agents.dataAgent import validationAgent
+import pandas as pd
+from agents.utils.extractArticles import extract
+from rag import embeddingsGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +43,7 @@ class Orchestrator:
         
         self.scenario_agent = scenarioAgent.agent(api_key=api_key, model_name=model_name)
         self.keyword_agent = keywordAgent.agent(api_key=api_key, model_name=model_name)
+        self.validation_agent = validationAgent.agent(api_key=api_key)
         self.gdelt = gdelt.Scraper(
             keyword_dict=response,
             user_data=user_data,
@@ -57,18 +62,7 @@ class Orchestrator:
         
     def run(self, risk_type=None, end_date=None, start_date=None, user_data=None):
         """
-        Run the full risk analysis process.
-        
-        Args:
-            risk_type (str, optional): Specific risk type to analyze. Defaults to None (all risks).
-            end_date (datetime, optional): End date for GDELT queries. Defaults to current time.
-            start_date (datetime, optional): Start date for GDELT queries. Defaults to 365 days before end_date.
-            user_data (dict, optional): Override for user data provided at initialization. Defaults to None.
-        
-        Returns:
-            tuple: (results, gdelt_results) where:
-                - results: Dict mapping each risk to scenario and keywords
-                - gdelt_results: Dict mapping each risk to related news articles
+        Run the full data extraction and feature engineering process.
         """
         # Use user_data from initialization if not provided in method call
         if user_data is None:
@@ -85,15 +79,15 @@ class Orchestrator:
             
         # Step 1: Generate scenarios from user survey data
         logger.info("Starting scenario generation")
-        scenarios = self.scenario_agent.generate_scenarios(user_data, risk_type)
+        scenarios = self.scenario_agent.generate(user_data, risk_type)
         # Clean scenarios
-        scenarios_cleaned = clean_and_parse_json(scenarios, field_to_clean="scenario", fallback={})
+        scenarios_cleaned = parse(scenarios, field_to_clean="scenario", fallback={})
         
         # Step 2: Generate keywords from scenarios
         logger.info("Starting keyword generation from scenarios")
-        keywords = self.keyword_agent.generate_keywords(user_data=user_data, scenarios=scenarios_cleaned, risk_type=risk_type)
+        keywords = self.keyword_agent.generate(user_data=user_data, scenarios=scenarios_cleaned, risk_type=risk_type)
         # Clean keywords
-        keywords_cleaned = clean_and_parse_json(keywords, field_to_clean="keywords", fallback={})
+        keywords_cleaned = parse(keywords, field_to_clean="keywords", fallback={})
         
         # Combine results for easier consumption
         results = {}
@@ -120,8 +114,64 @@ class Orchestrator:
             end_date=end_date,
             language="eng"
         )
-            
-        return results, gdelt_results
+        # Combine the GDELT results 
+        all_gdelt_articles = []
+        for broad_risk, item in gdelt_results.items(): 
+                    for specific_risk, sub_item in item.items():
+                        for keyword, data_frame in sub_item.items():
+                            all_gdelt_articles.append(data_frame)
+        all_gdelt_articles = pd.concat(all_gdelt_articles, ignore_index=True)
+        all_gdelt_articles = all_gdelt_articles.drop_duplicates(subset=['title'])
+
+        logger.info("GDELT query completed")
+        logger.info(f"Number of articles retrieved: {len(all_gdelt_articles)}")
+
+        # Step 4: Validate the GDELT results
+        logger.info("Starting validation of GDELT results")
+        # Validate the GDELT results
+        valid_results = self.validation_agent.validate(user_data=user_data, articles_dict=gdelt_results)
+        # Clean the validation results
+        valid_results_cleaned = parse(valid_results, field_to_clean="relevant", fallback={})
+        # extract relevant articles
+        relevant_articles_titles = []
+        for broad_risk, item in valid_results_cleaned.items():
+            for specific_risk, sub_item in item.items():
+                for keyword, data_frame in sub_item.items():
+                    if isinstance(data_frame, dict) and 'relevant' in data_frame:
+                        relevant_articles_titles.extend(data_frame['relevant'])
+
+       
+        # Filter the articles based on the validation results
+        relevant_articles_df = all_gdelt_articles[all_gdelt_articles['title'].isin(relevant_articles_titles)]
+
+        logger.info(f"Number of relevant articles: {len(relevant_articles_df)}")
+
+        # Step 5: extract article content
+        logger.info("Starting article content extraction")
+        relevant_articles_df.reset_index(drop=True, inplace=True)
+        relevant_articles_df['content'] = relevant_articles_df['url'].apply(
+                                            lambda x: extract(x)[0]  # Extract only the content
+                                        )
+       
+        # step 6: generate embeddings
+        relevant_articles_df_embedded = embeddingsGenerator.generate(relevant_articles_df, text_column='content')
+
+        # step 7: save as a json file
+        relevant_articles_df_embedded['date'] = pd.to_datetime(relevant_articles_df_embedded['seendate'])
+        relevant_articles_df_embedded['date'] = relevant_articles_df_embedded['date'].dt.date
+
+        final_output_dict = {
+                row['title']: {
+                    'url' : row['url'],
+                    'domain': row['domain'],
+                    'embedding': row['embedding'],
+                    'content': row['content'],
+                    'date': row['date'],
+                }
+                for _, row in relevant_articles_df_embedded.iterrows() 
+            }
+
+        return results, final_output_dict
 
 # # Example usage for corrected Orchestrator
 # if __name__ == "__main__":

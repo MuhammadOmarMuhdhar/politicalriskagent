@@ -3,6 +3,7 @@ import json
 import time
 from agents.base_model import GeminiModel
 from agents.prompts import header
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class agent:
             logger.error(f"Error loading risk types: {e}")
             return {}
     
-    def _build_keyword_prompt(self, user_data, risk_type, risk_definition, scenario):
+    def _build_keyword_prompt(self, user_data, risk_type, scenario):
         """Build prompt for generating keywords based on scenarios."""
         # Join the scenario questions into a coherent text
         scenario_text = " ".join(scenario)
@@ -41,22 +42,20 @@ class agent:
 
         This scenario falls under the following risk category: **{risk_type}**
 
-        **Definition of Risk Type:**  
-        {risk_definition}
-
         ---
 
         **Your Task:**  
-        Generate **five targeted keywords** that capture the most relevant risk-related factors in this scenario. Each keyword should:
+        Generate **three targeted keywords** that capture the most relevant risk-related factors in this scenario. Each keyword should:
 
         - Be **highly specific** to the client's context  
-        - Be **strictly 1–2 words** in length  
+        - Be **strictly 1 words** in length  
         - Be useful for querying structured sources like the **GDELTdocs API**  
-        - Focus on **key actors, triggers, or indicators** — such as policies, sectors, institutions, or events
+        - Be **actionable** and relevant to the client's business objectives
+        - Avoid generic terms or phrases
 
         Please respond in the following JSON format:
         {{
-            "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+            "keywords": ["keyword1", "keyword2", "keyword3"]
         }}
 
         ---
@@ -67,7 +66,6 @@ class agent:
         The client, a mid-sized renewable energy company headquartered in Germany, is planning to expand its solar panel manufacturing operations into Southeast Asia, specifically Vietnam. The company intends to form a joint venture with a local partner and begin operations within 18 months. The investment is considered strategic, with the goal of capturing emerging green energy markets in the region. However, the client is concerned about changing environmental regulations, import/export restrictions, and government subsidies for local competitors.
 
         **Risk Type**: Regulatory Risk  
-        **Definition**: Regulatory risk refers to the potential impact of changes in laws, regulations, or policies that could adversely affect a business's operations or profitability.
 
         **Response**:
         {{
@@ -81,56 +79,33 @@ class agent:
         }}
         """
 
-    def generate_keywords(self, user_data, scenarios, risk_type=None):
+    def generate(self, user_data, scenarios, risk_type=None):
         """Generate keywords based on scenarios for specific or all risk types."""
-        results = {}
-        
-        # If risk_type is specified, only generate for that type
-        if risk_type and risk_type in self.risk_types and risk_type in scenarios:
-            try:
-                scenario_data = scenarios[risk_type]['scenario']
-                if not scenario_data:
-                    logger.warning(f"No scenario data found for {risk_type}")
-                    return {risk_type: {"keywords": []}}
-                
-                logger.info(f"Generating keywords for: {risk_type}")
-                prompt = self._build_keyword_prompt(user_data=user_data, 
-                                                    risk_type=risk_type, 
-                                                    risk_definition=self.risk_types[risk_type], 
-                                                    scenario=scenario_data)
-                response = self.gemini.generate(prompt)
-                results[risk_type] = response
-            except Exception as e:
-                logger.error(f"Error generating keywords for {risk_type}: {e}")
-                results[risk_type] = {"keywords": []}
-                self._handle_retry(e)
-            return results
+        results = defaultdict(lambda: defaultdict(dict))  
         
         # Generate for all risk types with available scenarios
-        for risk_type, risk_definition in self.risk_types.items():
-            if risk_type not in scenarios:
-                logger.warning(f"No scenario data found for {risk_type}")
-                results[risk_type] = {"keywords": []}
-                continue
+        for broad_risk, item in self.risk_types.items(): 
+            for specific_risk, sub_item in item.items():
+                keywords_list = sub_item['keywords']
+                for keyword in keywords_list:
                 
-            scenario_data = scenarios[risk_type]
-            if not scenario_data:
-                logger.warning(f"Empty scenario data for {risk_type}")
-                results[risk_type] = {"keywords": []}
-                continue
+                    scenario_data = scenarios[broad_risk][specific_risk]
                 
-            try:
-                logger.info(f"Generating keywords for: {risk_type}")
-                prompt = self._build_keyword_prompt(user_data=user_data, 
-                                                    risk_type=risk_type, 
-                                                    risk_definition=self.risk_types[risk_type], 
-                                                    scenario=scenario_data)
-                response = self.gemini.generate(prompt)
-                results[risk_type] = response
-            except Exception as e:
-                logger.error(f"Error generating keywords for {risk_type}: {e}")
-                results[risk_type] = {"keywords": []}
-                self._handle_retry(e)
+                    if not scenario_data or keyword not in scenario_data:
+                        logger.warning(f"Empty scenario data for {risk_type}")
+                        results[broad_risk][specific_risk][keyword] = {"keywords": []}
+                        continue
+                        
+                    try:
+                        prompt = self._build_keyword_prompt(user_data=user_data, 
+                                                            risk_type=keyword, 
+                                                            scenario=scenario_data[keyword])
+                        response = self.gemini.generate(prompt)
+                        results[broad_risk][specific_risk][keyword] = response
+                    except Exception as e:
+                        logger.error(f"Error generating keywords for {keyword}: {e}")
+                        results[broad_risk][specific_risk][keyword] = {"keywords": []}
+                        self._handle_retry(e)
         
         return results
     
