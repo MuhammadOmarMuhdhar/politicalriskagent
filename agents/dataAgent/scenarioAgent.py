@@ -67,3 +67,13 @@ class agent:
                         self._handle_retry(e)
 
         return results
+    
+    def _handle_retry(self, exception):
+        """Handle retries with appropriate delay."""
+        retry_delay = getattr(exception, 'retry_delay', None)
+        if retry_delay:
+            logger.info(f"Retrying after {retry_delay} seconds...")
+            time.sleep(retry_delay)
+        else:
+            logger.info("Retrying after default delay...")
+            time.sleep(10)

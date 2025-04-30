@@ -171,7 +171,7 @@ class Orchestrator:
                 for _, row in relevant_articles_df_embedded.iterrows() 
             }
 
-        return results, final_output_dict
+        return scenarios_cleaned, final_output_dict
 
 # # Example usage for corrected Orchestrator
 # if __name__ == "__main__":

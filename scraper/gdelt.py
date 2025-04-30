@@ -7,6 +7,17 @@ from utils import countrycode
 # Import refactored classes
 from scraper import connector, processor
 
+from datetime import datetime
+from typing import List, Optional, Dict, Union
+import pandas as pd
+from gdeltdoc import GdeltDoc, Filters
+from utils import countrycode
+import time
+from collections import defaultdict
+
+# Import refactored classes
+from scraper import connector, processor
+
 class Scraper:
     """Handles querying GDELT API and processing results through the document pipeline."""
     
@@ -45,8 +56,16 @@ class Scraper:
                 if code:
                     target_country_codes.append(code)
         
-        # Combine valid codes into a single list
-        return [code for code in [home_country_code] + target_country_codes if code]
+        # Combine home and target country codes
+        country_codes = [home_country_code] + target_country_codes
+
+        # return string if only one country code
+        if len(country_codes) == 1:
+            country_codes = country_codes[0]
+        else:
+            country_codes = [code for code in country_codes if code]
+            
+        return home_country_code
 
     def run(
         self,
@@ -79,63 +98,49 @@ class Scraper:
         )
 
         # Dictionary to store results by risk type
-        results = {}
-        
-        # Process each risk type and its keywords
-        for risk_type, value in self.keyword_dict.items():
-            keywords = value.get('keywords', [])
-            risk_articles = []
+        results = defaultdict(lambda: defaultdict(dict))
+
+        for broad_risk, item in self.keyword_dict.items(): 
+            for specific_risk, sub_item in item.items():
+    
+                risk_articles = []
+                for broad_keyword, sub_item in sub_item.items():
+                    keywords_list = sub_item['keywords']
             
-            for keyword in keywords:
-                # Ensure keyword is a string
-                if not isinstance(keyword, str):
-                    print(f"Skipping non-string keyword: {keyword}")
-                    continue
-                
-                print(f"Processing keyword: {keyword} for risk type: {risk_type}")
-                
-                # Fetch articles for this keyword
-                articles_df = self._fetch_articles(
-                    risk_keywords=keyword,  # Pass as a list
-                    target_country_code=country_codes,
-                    start_date=start_date,
-                    end_date=end_date,
-                    domain_filter=self.domains,
-                    language=language
-                )
-                
-                # Check if we got valid results
-                if isinstance(articles_df, pd.DataFrame) and not articles_df.empty:
-                    # Add metadata
-                    articles_df['keyword'] = keyword
-                    articles_df['risk_type'] = risk_type
-                    risk_articles.append(articles_df)
-            
-            # Combine all articles for this risk type
-            if risk_articles:
-                results[risk_type] = pd.concat(risk_articles, ignore_index=True)
-                print(f"Retrieved {len(results[risk_type])} articles for risk type '{risk_type}'")
-        
-        # Process additional risk keywords if provided
-        if risk_keywords:
-            general_articles = self._fetch_articles(
-                risk_keywords=risk_keywords,
-                target_country_code=country_codes,
-                start_date=start_date,
-                end_date=end_date,
-                domain_filter=self.domains,
-                language=language
-            )
-            
-            if isinstance(general_articles, pd.DataFrame) and not general_articles.empty:
-                general_articles['risk_type'] = 'general'
-                general_articles['keyword'] = ', '.join(risk_keywords) if isinstance(risk_keywords, list) else risk_keywords
-                results['general'] = general_articles
-                print(f"Retrieved {len(general_articles)} articles for general risk keywords")
+                    for keyword in keywords_list:
+                        # Ensure keyword is a string
+                        if not isinstance(keyword, str):
+                            print(f"Skipping non-string keyword: {keyword}")
+                            continue
+                        
+                        print(f"Processing keyword: {keyword}")
+                        
+                        # Fetch articles for this keyword
+                        articles_df = self._fetch_articles(
+                            risk_keywords=keyword,  # Pass as a list
+                            target_country_code=country_codes,
+                            start_date=start_date,
+                            end_date=end_date,
+                            domain_filter=self.domains,
+                            language=language
+                        )
+                        
+                        # Check if we got valid results
+                        if isinstance(articles_df, pd.DataFrame) and not articles_df.empty:
+                            # Add metadata
+                            articles_df['keyword'] = keyword
+                            articles_df['broad_keyword'] = broad_keyword
+                            articles_df['risk_type'] = specific_risk
+                            articles_df['broad_risk'] = broad_risk
+                            results[broad_risk][specific_risk][keyword] = articles_df
+
+                        time.sleep(1)  # Rate limiting
+
+                        
         
         # Count total articles processed
-        total_articles = sum(len(df) for df in results.values())
-        print(f"Total articles retrieved: {total_articles}")
+        # total_articles = sum(len(df) for df in results.values())
+        # print(f"Total articles retrieved: {total_articles}")
         
         return results
         
