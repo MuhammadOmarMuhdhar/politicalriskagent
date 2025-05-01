@@ -1,7 +1,7 @@
 from collections import defaultdict
 from data.azuredb import vectorSearch
 
-def extract(scenarios, top_subcategories, container, similarity_threshold=0.3, top_k=5):
+def extract(scenarios, top_subcategories, container, similarity_threshold=0.1, top_k=5):
     content_extracted = defaultdict(dict)
     
     for key, value in scenarios.items():

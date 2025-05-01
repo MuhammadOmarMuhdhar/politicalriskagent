@@ -3,7 +3,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from collections import defaultdict
 
 class Calculator:
-    def __init__(self, political_bigrams, threshold=0.6):
+    def __init__(self, political_bigrams, threshold=0.4):
         """
         Initialize the calculator with political bigrams and similarity threshold.
         """

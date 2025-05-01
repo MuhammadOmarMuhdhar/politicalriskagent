@@ -45,7 +45,7 @@ class agent:
         ---
 
         **Your Task:**  
-        Generate **six targeted keywords** that capture the most relevant risk-related factors in this scenario. Each keyword should:
+        Generate **3 targeted keywords** that capture the most relevant risk-related factors in this scenario. Each keyword should:
 
         - Be **highly specific** to the client's context
         - Do not use generic terms or phrases like ESG, Risk, Political, etc. 
