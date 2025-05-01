@@ -394,25 +394,9 @@ elif st.session_state.page == 1:
 elif st.session_state.page == 2:
     st.title("Political Risk Analysis")
 
-    # Set up the Python path to find the agents module
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    if project_root not in sys.path:
-        sys.path.append(project_root)
-    
-    # Now try importing with better error handling
-    try:
-        from agents.langgraphCombiner.LangGraph import LangGraphOrchestrator
-        from apisecrets.geminapi import api_key
-        from langchain_google_genai import ChatGoogleGenerativeAI
-    except ImportError as e:
-        st.error(f"""
-        Failed to import required modules. Error: {str(e)}
-        
-        Current path: {os.getcwd()}
-        Python path: {sys.path}
-        Project root: {project_root}
-        """)
-        st.stop()
+
+    if "user_data" not in st.session_state:
+        st.session_state.user_data = {}
 
     # Convert session state data to the format expected by LangGraph
     user_data = {
@@ -431,95 +415,232 @@ elif st.session_state.page == 2:
         "additional_info": st.session_state.get("additional_context", "")
     }
 
-    # Add a placeholder for logs
-    log_display = st.empty()
+    # store user data in session state
+    st.session_state.user_data = user_data
 
-    with st.spinner("Initializing analysis..."):
-        try:
-            # Initialize LangGraph Orchestrator
-            orchestrator = LangGraphOrchestrator(api_key=api_key)
-            
-            # Run analysis with progress tracking
-            with st.spinner("Running political risk analysis..."):
-                try:
-                    with ThreadPoolExecutor() as executor:
-                        future = executor.submit(orchestrator.run, user_data)
-                        while not future.done():
-                            # Update logs every second
-                            log_display.code(log_stream.getvalue(), language="text")
-                            time.sleep(1)
-                        final_state = future.result(timeout=300)  # 5 minutes timeout
-                        # Final log update
-                        log_display.code(log_stream.getvalue(), language="text")
 
-                    # Display results
-                    st.header("Analysis Results")
+    user_profile = {
+        "Investor Type": st.session_state.investor_type,
+        "Location": st.session_state.location,
+        "Investment Sectors": ", ".join(st.session_state.investment_sectors),
+        "Target Locations": ", ".join(st.session_state.target_locations),
+        "Investment Objective": st.session_state.investment_objective,
+        "Analysis Motivation": st.session_state.analysis_motivation,
+        "Risk Experience": st.session_state.risk_experience,
+        "Timeline": st.session_state.timeline,
+        "Investment Scale": st.session_state.investment_scale,
+        "Risk Tolerance": st.session_state.risk_tolerance,
+        "ESG Considerations": st.session_state.esg,
+        "Primary Concerns": ", ".join(st.session_state.primary_concerns),
+        "Additional Information": st.session_state.get("additional_context", "")
+    }
 
-                    # Display research team results
-                    with st.expander("Research Details"):
-                        st.subheader("Keywords")
-                        st.json(final_state.get("keywords", {}))
-                        
-                        st.subheader("Articles")
-                        st.json(final_state.get("articles", {}))
-                        
-                        st.subheader("Risk Scores")
-                        risk_scores = final_state.get("risk_scores", {})
-                        if risk_scores:
-                            st.bar_chart(risk_scores)
-                        else:
-                            st.warning("No risk scores were generated.")
+    # Display a review section with improved formatting
+    st.markdown("### Review Your Investment Profile")
+    st.markdown("""
+    Please review the information you've provided before we proceed with your investment analysis.
+    """)
 
-                    # Display summary
-                    st.header("Risk Assessment Summary")
-                    if final_state.get("status") == "research_complete":
-                        st.success("Analysis completed successfully!")
-                        
-                        if risk_scores:
-                            # Convert risk scores to a format suitable for visualization
-                            risk_data = pd.DataFrame({
-                                'Risk Category': list(risk_scores.keys()),
-                                'Risk Score': list(risk_scores.values())
-                            })
-                            
-                            # Create a bar chart
-                            fig = px.bar(risk_data, 
-                                       x='Risk Category', 
-                                       y='Risk Score',
-                                       title='Political Risk Assessment Results')
-                            st.plotly_chart(fig)
-                            
-                            # Add textual summary
-                            st.subheader("Key Findings")
-                            for category, score in risk_scores.items():
-                                risk_level = "High" if score > 0.7 else "Medium" if score > 0.4 else "Low"
-                                st.write(f"- **{category}**: {risk_level} risk (score: {score:.2f})")
-                    else:
-                        st.error(f"Analysis ended with status: {final_state.get('status')}")
-                        if final_state.get('error'):
-                            st.error(f"Error: {final_state.get('error')}")
+    # Create a more visually appealing display of user data
+    user_profile_df = pd.DataFrame(user_profile.items(), columns=["Parameter", "Response"])
+    st.table(user_profile_df)
 
-                except TimeoutError:
-                    st.error("Analysis timed out after 5 minutes. Please try again.")
-
-        except Exception as e:
-            st.error(f"Error during analysis: {str(e)}")
 
     # Navigation buttons
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Previous", key="results_prev"):
+        if st.button("Previous", key="analysis_prev"):
             prev_page()
     with col2:
-        if st.button("Start New Analysis", key="new_analysis"):
-            st.session_state.page = 0
-            st.rerun()
+        if st.button("Next", key="new_analysis"):
+            next_page()
 
+elif st.session_state.page == 3:
+    import sys 
+    import os
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, '..'))
+    sys.path.append(project_root)
 
+    from agents.dataAgent import scenarioAgentlight
+    from agents.utils.cleanJson import parse
 
+    st.title("Research Validation")
 
-
-
-
-
+    st.markdown("""
+    ### Human-in-the-Loop Review
     
+    Based on your profile and activity details, we've generated potential risk scenarios that could impact your interests.
+    
+    Please review these scenarios carefully. You can:
+    - Accept them as is
+    - Request regeneration if they don't align with your concerns
+    - Provide specific feedback to refine the analysis
+    
+    This step ensures our analysis is tailored to your specific situation.
+    """)
+
+    user_data = st.session_state.user_data
+
+    # Initialize session state variables for scenarios
+    if 'scenario' not in st.session_state:
+        st.session_state.scenario = {}
+        st.session_state.regenerate_count = 0
+
+    if 'scenario_generated' not in st.session_state:
+        st.session_state.scenario_generated = False
+    
+    if 'selected_scenarios' not in st.session_state:
+        st.session_state.selected_scenarios = []
+
+    if 'regenerate_count' not in st.session_state:
+        st.session_state.regenerate_count = 0
+    # Function to generate scenarios
+    def generate_scenarios():
+        with st.spinner("Generating risk scenarios based on your profile..."):
+            api_key = 'AIzaSyDqQOyzIrIhC4p2GfZ5_S8K4tbdNHgI4V0'
+            model_name = "gemini-2.0-flash"
+            scenario_agent = scenarioAgentlight.agent(api_key=api_key, model_name=model_name)
+            
+            scenarios = scenario_agent.generate(user_data, risk_type=None)
+            scenarios_cleaned = parse(scenarios, field_to_clean="scenario", fallback={})
+            
+            # Save scenarios to session state
+            st.session_state.scenario = scenarios_cleaned
+            st.session_state.scenario_generated = True
+            st.session_state.regenerate_count += 1
+        
+        return scenarios_cleaned
+
+    # Generate scenarios if not already done
+    if not st.session_state.scenario_generated:
+        scenarios_cleaned = generate_scenarios()
+    else:
+        scenarios_cleaned = st.session_state.scenario
+
+    # Display scenarios in an organized, interactive way
+    if scenarios_cleaned:
+        st.markdown("## Risk Scenarios")
+        
+        scenario_list = []
+        scenario_descriptions = {}
+        
+        # Extract and organize scenarios for display
+        for broad_risk, specific_risks in scenarios_cleaned.items():
+            for specific_risk, details in specific_risks.items():
+                for key, value in details.items():
+                    if isinstance(value, list) and value:
+                        scenario_id = f"{broad_risk}_{specific_risk}_{key}"
+                        scenario_title = f"{broad_risk.title()}: {specific_risk.title()}"
+                        scenario_list.append(scenario_id)
+                        scenario_descriptions[scenario_id] = {
+                            "title": scenario_title,
+                            "description": value[0],
+                            "category": broad_risk,
+                            "subcategory": specific_risk
+                        }
+        
+        # Display each scenario with checkbox for selection
+        with st.form(key="scenario_validation_form"):
+            st.markdown("### Select the scenarios you'd like to include in your analysis:")
+            
+            # Group scenarios by broad risk category for better organization
+            categories = set(desc["category"] for desc in scenario_descriptions.values())
+            
+            for category in categories:
+                st.markdown(f"#### {category.title()}")
+                cat_scenarios = {k: v for k, v in scenario_descriptions.items() if v["category"] == category}
+                
+                for scenario_id, details in cat_scenarios.items():
+                    col1, col2 = st.columns([0.1, 0.9])
+                    with col1:
+                        scenario_selected = st.checkbox(
+                            label="",
+                            value=scenario_id in st.session_state.selected_scenarios,
+                            key=f"check_{scenario_id}"
+                        )
+                    with col2:
+                        st.markdown(f"**{details['subcategory']}**")
+                        st.markdown(details['description'])
+                        st.markdown("---")
+                    
+                    if scenario_selected and scenario_id not in st.session_state.selected_scenarios:
+                        st.session_state.selected_scenarios.append(scenario_id)
+                    elif not scenario_selected and scenario_id in st.session_state.selected_scenarios:
+                        st.session_state.selected_scenarios.remove(scenario_id)
+            
+            # Feedback section
+            st.markdown("### Additional Feedback")
+            feedback = st.text_area(
+                "Is there anything specific about these scenarios you'd like us to consider or modify?",
+                key="scenario_feedback",
+                height=100
+            )
+
+            
+            # Save feedback to session state
+            if "scenario_feedback" not in st.session_state:
+                st.session_state["scenario_feedback"] = feedback  # only set if it doesn't exist yet
+
+             # Submit button for the form
+            submit = st.form_submit_button("Submit Selected Scenarios")
+            
+           
+            
+            if submit:
+                if st.session_state.selected_scenarios:
+                    st.session_state.selected_scenario_details = {
+                        scenario_id: scenario_descriptions[scenario_id] 
+                        for scenario_id in st.session_state.selected_scenarios 
+                        if scenario_id in scenario_descriptions
+                    }
+                    next_page()
+                else:
+                    st.error("Please select at least one scenario before proceeding.")
+    
+    # Regeneration option with limitation
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("Previous", key="scenario_prev"):
+            prev_page()
+    
+    with col2:
+        # Limit regenerations to prevent abuse
+        max_regenerations = 3
+        regenerate_disabled = st.session_state.regenerate_count >= max_regenerations
+        
+        if st.button("Regenerate Scenarios", 
+                    disabled=regenerate_disabled,
+                    help="Generate new scenarios based on your profile" if not regenerate_disabled else 
+                         f"Maximum of {max_regenerations} regenerations reached"):
+            st.session_state.scenario = {}
+            st.session_state.scenario_generated = False
+            st.session_state.selected_scenarios = []
+            st.rerun()
+    
+    # Display warning if regeneration limit reached
+    if regenerate_disabled:
+        st.warning(f"You've reached the maximum of {max_regenerations} scenario regenerations. Please select from the current scenarios or go back to modify your profile.")
+
+
+
+elif st.session_state.page == 4:
+    st.title("Analysis Submitted")
+    
+    # Display a success message
+    st.success("Your political risk analysis is being processed!")
+    
+    st.markdown(f"""
+    ### Thank You
+    
+    Your report will be sent to **{st.session_state.email}** within 20-60 minutes.
+    
+    **Confirmation ID:** {st.session_state.get('email', '')[:3].upper()}{int(time.time())%10000}
+    
+    Your report will include:
+    - Risk assessment for selected scenarios
+    - Probability estimates
+    - Strategic recommendations
+    
+    """)

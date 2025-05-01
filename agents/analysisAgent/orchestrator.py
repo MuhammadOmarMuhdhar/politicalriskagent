@@ -36,7 +36,7 @@ class Orchestrator:
         risk_calculator = pulse.Calculator(bigrams)
         risk_scores = risk_calculator.calculate(self.articles_dict)
 
-        return risk_scores
+        return bigrams, risk_scores
 
 
 
