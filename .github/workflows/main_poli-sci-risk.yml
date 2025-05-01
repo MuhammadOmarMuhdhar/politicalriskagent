@@ -70,4 +70,4 @@ jobs:
           app-name: 'poli-sci-risk'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_13669EADEB064E0CB9C09EB34FB5449C }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8F09F2AA51F14B668663B47E4D35B7F0 }}
