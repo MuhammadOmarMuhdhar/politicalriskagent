@@ -20,11 +20,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 import pandas as pd
 import plotly.express as px
 
-# Create a string buffer to capture logs
-log_stream = io.StringIO()
-# Add a stream handler to the logger
-stream_handler = logging.StreamHandler(log_stream)
-logging.getLogger().addHandler(stream_handler)
+# Remove the existing logging setup and instead import from main
+from frontend.main import log_stream
 
 @contextmanager
 def timeout(seconds):
