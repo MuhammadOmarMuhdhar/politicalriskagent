@@ -1,5 +1,24 @@
 import streamlit as st 
 import pycountry
+import time
+import pandas as pd
+import plotly.express as px
+import io
+import logging
+import os
+import sys
+from concurrent.futures import ThreadPoolExecutor
+
+# Add logging configuration at the top of main.py
+log_stream = io.StringIO()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(log_stream),
+        logging.StreamHandler(sys.stdout)  # Also print to console
+    ]
+)
 
 # Initialize session state variables if they don't exist
 if 'page' not in st.session_state:
@@ -7,6 +26,9 @@ if 'page' not in st.session_state:
 
 if 'email' not in st.session_state:
     st.session_state.email = ""
+
+if 'target_locations' not in st.session_state:
+    st.session_state.target_locations = []  # Initialize as empty list
 
 # Functions to navigate between pages
 def next_page():
@@ -16,7 +38,6 @@ def next_page():
 def prev_page():
     st.session_state.page -= 1
     st.rerun()
-
 
 # Page 0: Welcome and Email Collection
 if st.session_state.page == 0:
@@ -256,11 +277,11 @@ elif st.session_state.page == 1:
         # Add United States at the top
         country_names = ["United States"] + all_countries
         # Two-step location selection
-        target_region = st.multiselect(
+        target_locations = st.multiselect(
             "Select the countries or regions you're interested in",
             options=country_names,
             help=target_tooltip,
-            key="target_region"
+            default=st.session_state.target_locations
         )
         
         # Timeline
@@ -319,7 +340,7 @@ elif st.session_state.page == 1:
     # Validation check (corrected)
     if (
         investment_scale == "Select Scope" or 
-        not target_region or
+        not target_locations or
         timeline == "Select Timeline" or
         esg == "Select Importance" or
         risk_tolerance == "Select Tolerance" or
@@ -344,7 +365,7 @@ elif st.session_state.page == 1:
         
     # Save all selections to session state
     st.session_state.investment_scale = investment_scale
-    st.session_state.target_region = target_region
+    st.session_state.target_locations = target_locations
     st.session_state.timeline = timeline
     st.session_state.esg = esg
     st.session_state.risk_tolerance = risk_tolerance
@@ -360,7 +381,7 @@ elif st.session_state.page == 1:
     with col2:
         proceed_button_disabled = (
             investment_scale == "Select Scope" or 
-            not target_region or
+            not target_locations or
             timeline == "Select Timeline" or
             esg == "Select Importance" or
             risk_tolerance == "Select Tolerance" or
@@ -371,85 +392,128 @@ elif st.session_state.page == 1:
             next_page()
 
 elif st.session_state.page == 2:
-    business_profile = {
-        "Industry": st.session_state.industry,
-        "Headquarters Location": st.session_state.location_business,
-        "Company Size": st.session_state.company_size,
-        "Business Maturity": st.session_state.business_maturity,
-        "Business Model": st.session_state.business_model,
-        "International Exposure": st.session_state.international_exposure
-    }
+    st.title("Political Risk Analysis")
 
-    investment_details = {
-        "Type of Activity": st.session_state.activity_type,
-        "Target Location": st.session_state.target_location,
-        "Timeline": st.session_state.timeline,
-        "Investment Scale": st.session_state.investment_scale,
-        "Strategic Importance": st.session_state.strategic_importance,
-        "Local Partners": st.session_state.local_partners,
+    # Set up the Python path to find the agents module
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    if project_root not in sys.path:
+        sys.path.append(project_root)
+    
+    # Now try importing with better error handling
+    try:
+        from agents.langgraphCombiner.LangGraph import LangGraphOrchestrator
+        from apisecrets.geminapi import api_key
+        from langchain_google_genai import ChatGoogleGenerativeAI
+    except ImportError as e:
+        st.error(f"""
+        Failed to import required modules. Error: {str(e)}
         
-    }
+        Current path: {os.getcwd()}
+        Python path: {sys.path}
+        Project root: {project_root}
+        """)
+        st.stop()
 
-    st.title("Summary of Your Input")
-
-    col1, col2 = st.columns(2)
-
-    with col1: 
-
-        # --- Business Profile Section ---
-        st.subheader("📊 Business Profile")
-        for label, value in business_profile.items():
-            st.markdown(f"**{label}:** {value}")
-
-    with col2: 
-
-        # --- Investment Details Section ---
-        st.subheader("🌍 Investment or Expansion Details")
-        for label, value in investment_details.items():
-            # if label == "Additional Context" and value.strip():
-            #     with st.expander("💬 Additional Context"):
-            #         st.markdown(value)
-            # elif label != "Additional Context":
-                st.markdown(f"**{label}:** {value}")
-
-    st.markdown("---")
-    import os
-    import sys
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from agents.dataAgent import orchestrator
-    from apisecrets.geminapi import api_key
-
-
-
-        
+    # Convert session state data to the format expected by LangGraph
     user_data = {
-        "industry": st.session_state.industry,
-        "location_business": st.session_state.location_business,
-        "company_size": st.session_state.company_size,
-        "business_maturity": st.session_state.business_maturity,
-        "business_model": st.session_state.business_model,
-        "international_exposure": st.session_state.international_exposure,
-        "activity_type": st.session_state.activity_type,
-        "target_location": st.session_state.target_location,
+        "investor_type": st.session_state.investor_type,
+        "location": st.session_state.location,
+        "investment_sectors": ", ".join(st.session_state.investment_sectors),
+        "target_locations": ", ".join(st.session_state.target_locations),
+        "investment_objective": st.session_state.investment_objective,
+        "analysis_motivation": st.session_state.analysis_motivation,
+        "risk_experience": st.session_state.risk_experience,
         "timeline": st.session_state.timeline,
-        "investment_size": st.session_state.investment_scale,
-        "strategic_importance": st.session_state.strategic_importance,
-        "local_partnerships": st.session_state.local_partners,
+        "investment_scale": st.session_state.investment_scale,
+        "risk_tolerance": st.session_state.risk_tolerance,
+        "esg": st.session_state.esg,
         "primary_concerns": ", ".join(st.session_state.primary_concerns),
-        "other_relevant_info": st.session_state.get("additional_context", "")
+        "additional_info": st.session_state.get("additional_context", "")
     }
 
+    # Add a placeholder for logs
+    log_display = st.empty()
 
-    data_agent = orchestrator.Orchestrator(api_key=api_key) 
-    response = data_agent.run(user_data= user_data)
+    with st.spinner("Initializing analysis..."):
+        try:
+            # Initialize LangGraph Orchestrator
+            orchestrator = LangGraphOrchestrator(api_key=api_key)
+            
+            # Run analysis with progress tracking
+            with st.spinner("Running political risk analysis..."):
+                try:
+                    with ThreadPoolExecutor() as executor:
+                        future = executor.submit(orchestrator.run, user_data)
+                        while not future.done():
+                            # Update logs every second
+                            log_display.code(log_stream.getvalue(), language="text")
+                            time.sleep(1)
+                        final_state = future.result(timeout=300)  # 5 minutes timeout
+                        # Final log update
+                        log_display.code(log_stream.getvalue(), language="text")
 
-    for risk_type in response: 
-        scenario = response[risk_type]['scenario']
-        keywords = response[risk_type]['keywords']
+                    # Display results
+                    st.header("Analysis Results")
 
-        st.write(scenario)
+                    # Display research team results
+                    with st.expander("Research Details"):
+                        st.subheader("Keywords")
+                        st.json(final_state.get("keywords", {}))
+                        
+                        st.subheader("Articles")
+                        st.json(final_state.get("articles", {}))
+                        
+                        st.subheader("Risk Scores")
+                        risk_scores = final_state.get("risk_scores", {})
+                        if risk_scores:
+                            st.bar_chart(risk_scores)
+                        else:
+                            st.warning("No risk scores were generated.")
 
-        st.write(keywords)
+                    # Display summary
+                    st.header("Risk Assessment Summary")
+                    if final_state.get("status") == "research_complete":
+                        st.success("Analysis completed successfully!")
+                        
+                        if risk_scores:
+                            # Convert risk scores to a format suitable for visualization
+                            risk_data = pd.DataFrame({
+                                'Risk Category': list(risk_scores.keys()),
+                                'Risk Score': list(risk_scores.values())
+                            })
+                            
+                            # Create a bar chart
+                            fig = px.bar(risk_data, 
+                                       x='Risk Category', 
+                                       y='Risk Score',
+                                       title='Political Risk Assessment Results')
+                            st.plotly_chart(fig)
+                            
+                            # Add textual summary
+                            st.subheader("Key Findings")
+                            for category, score in risk_scores.items():
+                                risk_level = "High" if score > 0.7 else "Medium" if score > 0.4 else "Low"
+                                st.write(f"- **{category}**: {risk_level} risk (score: {score:.2f})")
+                    else:
+                        st.error(f"Analysis ended with status: {final_state.get('status')}")
+                        if final_state.get('error'):
+                            st.error(f"Error: {final_state.get('error')}")
+
+                except TimeoutError:
+                    st.error("Analysis timed out after 5 minutes. Please try again.")
+
+        except Exception as e:
+            st.error(f"Error during analysis: {str(e)}")
+
+    # Navigation buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Previous", key="results_prev"):
+            prev_page()
+    with col2:
+        if st.button("Start New Analysis", key="new_analysis"):
+            st.session_state.page = 0
+            st.rerun()
 
 
 
