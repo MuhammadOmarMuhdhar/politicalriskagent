@@ -1,193 +1,93 @@
-altair==5.5.0
-annotated-types==0.7.0
-anyio==4.9.0
-appnope==0.1.4
-asttokens==3.0.0
-attrs==25.3.0
+
+# Core Data Science
+numpy==2.2.4
+pandas==2.2.3
+scipy==1.15.2
+scikit-learn==1.6.1
+statsmodels==0.14.4
+
+# Visualization (Reduced to key libraries)
+matplotlib==3.10.1  # Base visualization
+plotly==6.0.1       # Interactive visualizations
+plotnine = 0.14.5
+
+# Machine Learning & AI
+torch==2.6.0        # Deep learning
+transformers==4.51.3  # Hugging Face transformers
+sentence-transformers==4.1.0  # Sentence embeddings
+huggingface-hub==0.30.2  # Model hub access
+bertopic==0.17.0    # Topic modeling
+# Note: Removed redundant ML packages that are dependencies of others
+
+# LangChain/LangGraph (Consolidated)
+langchain-core==0.3.56
+langgraph==0.4.1
+langsmith==0.3.39
+# Note: Removed redundant langgraph packages
+
+# Google API (Consolidated)
+google-api-python-client==2.167.0  # Core client for Google APIs
+google-auth==2.39.0  # Authentication
+google-genai==1.10.0  # Generative AI access
+googleapis-common-protos==1.70.0
+# Note: Removed older/duplicate Google packages
+
+# JSON Processing (Consolidated)
+jsonschema==4.23.0  # JSON schema validation
+orjson==3.10.18     # Fast JSON parsing
+# Note: Removed redundant JSON libraries
+
+# HTTP Clients (Consolidated)
+httpx==0.28.1       # Modern HTTP client
+# Note: Removed redundant HTTP clients
+
+# Azure (Kept all, likely for different services)
 azure-core==1.33.0
 azure-cosmos==4.9.0
 azure-functions==1.23.0
-beautifulsoup4==4.13.4
-bertopic==0.17.0
-blinker==1.9.0
-cachetools==5.5.2
-certifi==2025.1.31
-charset-normalizer==3.4.1
-click==8.1.8
-comm==0.2.2
-contourpy==1.3.2
-cycler==0.12.1
-debugpy==1.8.14
-decorator==5.2.1
-dill==0.4.0
+
+# Document Processing
+python-docx==1.1.2  # DOCX processing
+openpyxl==3.1.5     # Excel processing
+python-pptx==1.0.2  # PowerPoint processing
+pypdfium2==4.30.1   # PDF processing
+
+# NLP & Text Processing
+nltk==3.9.1         # Natural language toolkit
+regex==2024.11.6    # Enhanced regular expressions
+textblob==0.19.0    # Text processing
+lxml==5.3.2         # XML/HTML processing
+beautifulsoup4==4.13.4  # HTML parsing
+
+# Docling (Kept all, specialized package)
 docling==2.30.0
 docling-core==2.27.0
 docling-ibm-models==3.4.1
 docling-parse==4.0.1
-easyocr==1.7.2
-et_xmlfile==2.0.0
-executing==2.2.0
-filelock==3.18.0
-filetype==1.2.0
-fonttools==4.57.0
-fsspec==2025.3.2
-gdelt==0.1.14
-gdeltdoc==1.12.0
-gitdb==4.0.12
-GitPython==3.1.44
-google==3.0.0
-google-ai-generativelanguage==0.6.15
-google-api-core==2.24.2
-google-api-python-client==2.167.0
-google-auth==2.39.0
-google-auth-httplib2==0.2.0
-google-genai==1.10.0
-google-generativeai==0.8.4
-googleapis-common-protos==1.70.0
-grpcio==1.71.0
-grpcio-status==1.71.0
-h11==0.14.0
-hdbscan==0.8.40
-httpcore==1.0.8
-httplib2==0.22.0
-httpx==0.28.1
-huggingface-hub==0.30.2
-idna==3.10
-imageio==2.37.0
-ipykernel==6.29.5
-ipython==9.1.0
-ipython_pygments_lexers==1.1.1
-jedi==0.19.2
-Jinja2==3.1.6
-joblib==1.4.2
-jsonlines==3.1.0
-jsonpatch==1.33
-jsonpointer==3.0.0
-jsonref==1.1.0
-jsonschema==4.23.0
-jsonschema-specifications==2024.10.1
-jupyter_client==8.6.3
-jupyter_core==5.7.2
-kiwisolver==1.4.8
-langchain-core==0.3.56
-langgraph==0.4.1
-langgraph-checkpoint==2.0.25
-langgraph-prebuilt==0.1.8
-langgraph-sdk==0.1.66
-langsmith==0.3.39
-latex2mathml==3.77.0
-lazy_loader==0.4
-llvmlite==0.44.0
-lxml==5.3.2
-markdown-it-py==3.0.0
-marko==2.1.3
-MarkupSafe==3.0.2
-matplotlib==3.10.1
-matplotlib-inline==0.1.7
-mdurl==0.1.2
-milvus-lite==2.4.12
-mizani==0.13.3
-mpire==2.10.2
-mpmath==1.3.0
-multiprocess==0.70.17
-narwhals==1.34.1
-nest-asyncio==1.6.0
-networkx==3.4.2
-ninja==1.11.1.4
-nltk==3.9.1
-numba==0.61.2
-numpy==2.2.4
-opencv-python-headless==4.11.0.86
-openpyxl==3.1.5
-orjson==3.10.18
-ormsgpack==1.9.1
-packaging==24.2
-pandas==2.2.3
-parso==0.8.4
-patsy==1.0.1
-pexpect==4.9.0
-pillow==11.1.0
-platformdirs==4.3.7
-plotly==6.0.1
-plotnine==0.14.5
-pluggy==1.5.0
-prompt_toolkit==3.0.51
-proto-plus==1.26.1
-protobuf==5.29.4
-psutil==7.0.0
-ptyprocess==0.7.0
-pure_eval==0.2.3
-pyarrow==19.0.1
-pyasn1==0.6.1
-pyasn1_modules==0.4.2
-pyclipper==1.3.0.post6
-pycountry==24.6.1
-pydantic==2.11.3
-pydantic-settings==2.8.1
-pydantic_core==2.33.1
-pydeck==0.9.1
-Pygments==2.19.1
-pylatexenc==2.10
-pynndescent==0.5.13
-pyparsing==3.2.3
-pypdfium2==4.30.1
-python-bidi==0.6.6
-python-dateutil==2.9.0.post0
-python-docx==1.1.2
-python-dotenv==1.1.0
-python-pptx==1.0.2
-pytz==2025.2
-PyYAML==6.0.2
-pyzmq==26.4.0
-referencing==0.36.2
-regex==2024.11.6
-requests==2.32.3
-requests-toolbelt==1.0.0
-rich==14.0.0
-rpds-py==0.24.0
-rsa==4.9
-rtree==1.4.0
-safetensors==0.5.3
-scikit-image==0.25.2
-scikit-learn==1.6.1
-scipy==1.15.2
-semchunk==2.2.2
-sentence-transformers==4.1.0
-shapely==2.1.0
-shellingham==1.5.4
-six==1.17.0
-smmap==5.0.2
-sniffio==1.3.1
-soupsieve==2.6
-stack-data==0.6.3
-statsmodels==0.14.4
-streamlit==1.44.1
-sympy==1.13.1
-tabulate==0.9.0
-tenacity==9.1.2
-textblob==0.19.0
-threadpoolctl==3.6.0
-tifffile==2025.3.30
-tokenizers==0.21.1
-toml==0.10.2
-torch==2.6.0
-torchvision==0.21.0
-tornado==6.4.2
-tqdm==4.67.1
-traitlets==5.14.3
-transformers==4.51.3
-typer==0.15.2
-typing-inspection==0.4.0
+
+# Image Processing
+pillow==11.1.0      # Image processing
+opencv-python-headless==4.11.0.86  # Computer vision
+easyocr==1.7.2      # OCR capabilities
+scikit-image==0.25.2  # Image processing
+
+# Jupyter & Development Environment
+ipython==9.1.0      # Interactive Python
+jupyter_core==5.7.2  # Jupyter core
+ipykernel==6.29.5   # IPython kernel
+
+# Utilities
+tqdm==4.67.1        # Progress bars
+requests==2.32.3    # HTTP requests
+python-dotenv==1.1.0  # Environment variables
+pydantic==2.11.3    # Data validation
+
+# Web & API Development
+streamlit==1.44.1   # Web app framework
+
+# Data Retrieval & APIs
+gdeltdoc==1.12.0    # GDELT document API
+
+# Essential Dependencies (kept as they're likely required by other packages)
 typing_extensions==4.13.2
-tzdata==2025.2
-ujson==5.10.0
-umap-learn==0.5.7
-uritemplate==4.1.1
-urllib3==2.4.0
-wbgapi==1.0.12
-wcwidth==0.2.13
-websockets==15.0.1
-Werkzeug==3.1.3
-XlsxWriter==3.2.2
-xxhash==3.5.0
-zstandard==0.23.0
+PyYAML==6.0.2
