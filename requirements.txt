@@ -30,6 +30,7 @@ google-api-python-client==2.167.0  # Core client for Google APIs
 google-auth==2.39.0  # Authentication
 google-genai==1.10.0  # Generative AI access
 googleapis-common-protos==1.70.0
+google-generativeai == 0.8.5
 # Note: Removed older/duplicate Google packages
 
 # JSON Processing (Consolidated)
@@ -93,4 +94,4 @@ typing_extensions==4.13.2
 PyYAML==6.0.2
 
 # Caching & Message Brokering
-redis==5.0.0  # Redis client for Python
+redis==6.0.0  # Redis client for Python
