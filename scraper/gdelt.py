@@ -5,8 +5,6 @@ from gdeltdoc import GdeltDoc, Filters
 from utils import countrycode
 
 # Import refactored classes
-from scraper import connector, processor
-
 from datetime import datetime
 from typing import List, Optional, Dict, Union
 import pandas as pd
@@ -16,7 +14,6 @@ import time
 from collections import defaultdict
 
 # Import refactored classes
-from scraper import connector, processor
 
 class Scraper:
     """Handles querying GDELT API and processing results through the document pipeline."""

@@ -8,6 +8,20 @@ import logging
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from agents.dataAgent import scenarioAgentlight
+from agents.utils.cleanJson import parse
+from agents import main
+import subprocess
+import redis
+import uuid
+
+
+
+
 
 # Add logging configuration at the top of main.py
 log_stream = io.StringIO()
@@ -19,6 +33,27 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout)  # Also print to console
     ]
 )
+
+load_dotenv()
+redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+r = redis.from_url(redis_url)
+
+
+def submit_task(user_data):
+    task_id = str(uuid.uuid4())
+    task_data = {
+        "id": task_id,
+        "user_data": user_data,
+        "created_at": time.time()
+    }
+    
+    # Set initial status
+    r.set(f"task:{task_id}:status", "pending")
+    
+    # Add task to queue (worker will pick it up)
+    r.rpush("task_queue", json.dumps(task_data))
+    
+    return task_id
 
 # Initialize session state variables if they don't exist
 if 'page' not in st.session_state:
@@ -412,7 +447,8 @@ elif st.session_state.page == 2:
         "risk_tolerance": st.session_state.risk_tolerance,
         "esg": st.session_state.esg,
         "primary_concerns": ", ".join(st.session_state.primary_concerns),
-        "additional_info": st.session_state.get("additional_context", "")
+        "additional_info": st.session_state.get("additional_context", ""),
+        "email": st.session_state.email
     }
 
     # store user data in session state
@@ -456,14 +492,7 @@ elif st.session_state.page == 2:
             next_page()
 
 elif st.session_state.page == 3:
-    import sys 
-    import os
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.abspath(os.path.join(current_dir, '..'))
-    sys.path.append(project_root)
-
-    from agents.dataAgent import scenarioAgentlight
-    from agents.utils.cleanJson import parse
+    
 
     st.title("Research Validation")
 
@@ -498,7 +527,7 @@ elif st.session_state.page == 3:
     # Function to generate scenarios
     def generate_scenarios():
         with st.spinner("Generating risk scenarios based on your profile..."):
-            api_key = 'AIzaSyDqQOyzIrIhC4p2GfZ5_S8K4tbdNHgI4V0'
+            api_key = os.getenv("gemini_api_key")
             model_name = "gemini-2.0-flash"
             scenario_agent = scenarioAgentlight.agent(api_key=api_key, model_name=model_name)
             
@@ -595,6 +624,13 @@ elif st.session_state.page == 3:
                         if scenario_id in scenario_descriptions
                     }
                     next_page()
+                    user_data = st.session_state.user_data
+
+                    task_id = submit_task(user_data)
+
+                    
+                    # Use a non-daemon thread
+                   
                 else:
                     st.error("Please select at least one scenario before proceeding.")
     
@@ -626,7 +662,19 @@ elif st.session_state.page == 3:
 
 
 elif st.session_state.page == 4:
+    import json
+    import threading
     st.title("Analysis Submitted")
+
+    user_data = st.session_state.user_data
+
+    def run_analysis():
+        import subprocess
+        subprocess.run(["python", "agents/main.py", json.dumps(user_data)])
+    
+    # Use a non-daemon thread
+    thread = threading.Thread(target=run_analysis, daemon=False)
+    thread.start()
     
     # Display a success message
     st.success("Your political risk analysis is being processed!")
@@ -637,10 +685,6 @@ elif st.session_state.page == 4:
     Your report will be sent to **{st.session_state.email}** within 20-60 minutes.
     
     **Confirmation ID:** {st.session_state.get('email', '')[:3].upper()}{int(time.time())%10000}
-    
-    Your report will include:
-    - Risk assessment for selected scenarios
-    - Probability estimates
-    - Strategic recommendations
+
     
     """)
