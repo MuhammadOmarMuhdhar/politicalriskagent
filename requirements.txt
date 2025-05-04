@@ -93,4 +93,4 @@ typing_extensions==4.13.2
 PyYAML==6.0.2
 
 # Caching & Message Brokering
-redis==5.0.0  # Redis client for Python
+redis==6.0.0  # Redis client for Python
