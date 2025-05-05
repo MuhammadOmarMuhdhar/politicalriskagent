@@ -82,7 +82,7 @@ tqdm==4.67.1        # Progress bars
 requests==2.32.3    # HTTP requests
 python-dotenv==1.1.0  # Environment variables
 pydantic==2.11.3    # Data validation
-pycountru==24.6.1  # Country data
+pycountry==24.6.1  # Country data
 
 # Web & API Development
 streamlit==1.44.1   # Web app framework
