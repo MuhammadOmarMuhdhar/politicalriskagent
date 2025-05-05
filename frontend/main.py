@@ -1,21 +1,17 @@
 import streamlit as st 
-import pycountry
 import time
 import pandas as pd
-import plotly.express as px
 import io
 import logging
 import os
 import sys
-from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
+import pycountry
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from agents.dataAgent import scenarioAgentlight
 from agents.utils.cleanJson import parse
-from agents import main
-import subprocess
 import redis
 import uuid
 
